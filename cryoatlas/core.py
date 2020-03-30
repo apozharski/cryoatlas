@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
 import os
 import cv2
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import xmltodict
 
 def dir_path(string):
     if os.path.isdir(string):
@@ -128,7 +130,33 @@ def get_transform(src_at, dst_at, debug=False):
         cv2.destroyAllWindows()
 
     return M
+
+def metadata_test(metadata_path, square_path):
+    xmls =[]
+    for file in os.listdir(metadata_path):
+        if file.endswith(".xml"):
+            xmls.append(os.path.join(metadata_path, file))
     
+    Xs = []
+    Ys = []
+    i = 0
+    for fpath in xmls:
+        with open(fpath) as fd:
+            meta = xmltodict.parse(fd.read())
+        x = float(meta['MicroscopeImage']['microscopeData']['stage']['Position']['X'])
+        y = float(meta['MicroscopeImage']['microscopeData']['stage']['Position']['Y'])
+        Xs.append(x)
+        Ys.append(y)
+        plt.text(x, y, str(i), fontsize=9)
+        i+=1
+    with open(square_path) as fd:
+        meta = xmltodict.parse(fd.read())
+        x = float(meta['MicroscopeImage']['microscopeData']['stage']['Position']['X'])
+        y = float(meta['MicroscopeImage']['microscopeData']['stage']['Position']['Y'])
+        plt.scatter(x,y)
+    plt.scatter(Xs,Ys)
+    plt.show()
+
 if __name__ == "__main__":
     from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
@@ -143,6 +171,8 @@ if __name__ == "__main__":
                         help="Calculate src to dest transform")
     parser.add_argument("--segment", action="store_true",
                         help="Calculate segmentation")
+    parser.add_argument("--xml", action="store_true",
+                        help="print xml data")
     
     args = parser.parse_args()
     at1 = cv2.imread(args.source + "/Atlas_1.jpg", cv2.IMREAD_COLOR)
@@ -154,4 +184,6 @@ if __name__ == "__main__":
     if args.tform:
         transform = get_transform(at1,at2, debug=True)
         print(transform)
-        
+
+    if args.xml:
+        metadata_test(args.source, args.gridsquare)
